@@ -104,7 +104,8 @@ def build_parser():
             metavar='POOLING', default=POOLING)
     return parser
 
-
+# A Neural Algorithm of Artisic Style 论文实现
+# 针对每两幅图片都要在GPU上进行训练，大约半个小时一张图片 1000 iteration.
 def main():
     parser = build_parser()
     options = parser.parse_args()
@@ -115,6 +116,7 @@ def main():
     content_image = imread(options.content)
     style_images = [imread(style) for style in options.styles]
 
+    # 输出宽度, 用于定义输出图片的大小
     width = options.width
     if width is not None:
         new_shape = (int(math.floor(float(content_image.shape[0]) /
@@ -190,10 +192,13 @@ def main():
 def imread(path):
     img = scipy.misc.imread(path).astype(np.float)
     if len(img.shape) == 2:
+        # 秩为2，证明是一个二维的灰度图，没有多通道。
+        # 强行转化为3通道图像，每个图像通道都是那个黑白通道.
         # grayscale
         img = np.dstack((img,img,img))
     elif img.shape[2] == 4:
         # PNG with alpha channel
+        # 截取前三个通道. alpha通道可以用来优化图片展示效果.
         img = img[:,:,:3]
     return img
 
