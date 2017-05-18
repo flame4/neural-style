@@ -33,8 +33,12 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     content_features = {}
     style_features = [{} for _ in styles]
 
+    # 抽取出来的还不可以直接使用
+    # weights 根据下标来获取对应层的参数
+    # mean_pixel = array([ 123.68 ,  116.779,  103.939]) 用于 TODO
     vgg_weights, vgg_mean_pixel = vgg.load_net(network)
 
+    # 默认参数倍数是指数级别向下增加的?
     layer_weight = 1.0
     style_layers_weights = {}
     for style_layer in STYLE_LAYERS:
@@ -42,6 +46,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         layer_weight *= style_layer_weight_exp
 
     # normalize style layer weights
+    # 归一化上面的weights数组
     layer_weights_sum = 0
     for style_layer in STYLE_LAYERS:
         layer_weights_sum += style_layers_weights[style_layer]
@@ -50,7 +55,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
     # compute content features in feedforward mode
     g = tf.Graph()
-    with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
+    with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
         image = tf.placeholder('float', shape=shape)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
         content_pre = np.array([vgg.preprocess(content, vgg_mean_pixel)])
@@ -60,7 +65,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # compute style features in feedforward mode
     for i in range(len(styles)):
         g = tf.Graph()
-        with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
+        with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
             image = tf.placeholder('float', shape=style_shapes[i])
             net = vgg.net_preloaded(vgg_weights, image, pooling)
             style_pre = np.array([vgg.preprocess(styles[i], vgg_mean_pixel)])
