@@ -23,7 +23,9 @@ def load_net(data_path):
     data = scipy.io.loadmat(data_path)
     if not all(i in data for i in ('layers', 'classes', 'normalization')):
         raise ValueError("You're using the wrong VGG19 data. Please follow the instructions in the README to download the correct data.")
+    # mean.shape = (224,224,3)
     mean = data['normalization'][0][0][0]
+    # mean_pixel = array([123.68, 116.779, 103.939])
     mean_pixel = np.mean(mean, axis=(0, 1))
     weights = data['layers'][0]
     return weights, mean_pixel

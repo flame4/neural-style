@@ -9,7 +9,11 @@ from sys import stderr
 
 from PIL import Image
 
+# 串联后面的部分可以抽取内容信息
+# 可是为什么不从4-4/5-4获取呢?
+# 经过实验验证
 CONTENT_LAYERS = ('relu4_2', 'relu5_2')
+# 串联前面的部分可以抽取特征信息
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 
 from functools import reduce
@@ -28,6 +32,11 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
     :rtype: iterator[tuple[int|None,image]]
     """
+
+    # 这里应该是预留下来用于batch训练的
+    # 对于这个应用，只会使用到一幅图片
+    # 但是在基于model的应用里面可以用到 mini-batches，这里写了一个通用的方法
+    # shape = (None) + content.shape 定义最前面维度长度不定
     shape = (1,) + content.shape
     style_shapes = [(1,) + style.shape for style in styles]
     content_features = {}
@@ -38,7 +47,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # mean_pixel = array([ 123.68 ,  116.779,  103.939]) 用于 TODO
     vgg_weights, vgg_mean_pixel = vgg.load_net(network)
 
-    # 默认参数倍数是指数级别向下增加的?
+    # 默认参数倍数是指数级别向下的
+    # 因为风格在越向后的网络越少，这里的style_layer_weight_exp应该是小于1的
     layer_weight = 1.0
     style_layers_weights = {}
     for style_layer in STYLE_LAYERS:
@@ -54,8 +64,10 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         style_layers_weights[style_layer] /= layer_weights_sum
 
     # compute content features in feedforward mode
+    # 计算content部分，因为只需要计算一次，所以这里就直接计算好了放在内存中
     g = tf.Graph()
     with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
+        # 注意因为activation的表述，图片输入CNN只能以float的形式，尽管只是对图片空间做了一次缩放，并不影响训练和展示
         image = tf.placeholder('float', shape=shape)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
         content_pre = np.array([vgg.preprocess(content, vgg_mean_pixel)])
@@ -63,6 +75,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             content_features[layer] = net[layer].eval(feed_dict={image: content_pre})
 
     # compute style features in feedforward mode
+    # 同上，只需要计算一次
     for i in range(len(styles)):
         g = tf.Graph()
         with g.as_default(), g.device('/gpu:0'), tf.Session() as sess:
@@ -104,6 +117,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         content_loss += reduce(tf.add, content_losses)
 
         # style loss
+        # 对于多个style的loss直接叠加是什么意思? 这个子功能还没有看懂，就先不用吧。
         style_loss = 0
         for i in range(len(styles)):
             style_losses = []

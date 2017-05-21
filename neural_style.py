@@ -174,7 +174,9 @@ def main():
         style_blend_weights = [weight/total_blend_weight
                                for weight in style_blend_weights]
 
-    #  定义从哪张照片开始训练
+    # 定义从哪张照片开始迭代
+    # 如果是自己定义，可以混合入一张噪音图，并指定混合比例
+    # 如果不指定，那么从一张随机生成的图片开始
     initial = options.initial
     if initial is not None:
         initial = scipy.misc.imresize(imread(initial), content_image.shape[:2])
