@@ -228,7 +228,7 @@ def main():
 
 
 def imread(path):
-    img = scipy.misc.imread(path).astype(np.float)
+    img = scipy.misc.imread(path).astype(np.float32)
     if len(img.shape) == 2:
         # 秩为2，证明是一个二维的灰度图，没有多通道。
         # 强行转化为3通道图像，每个图像通道都是那个黑白通道.

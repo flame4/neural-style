@@ -30,16 +30,23 @@ def load_net(data_path):
     weights = data['layers'][0]
     return weights, mean_pixel
 
+# Return net dict
+# key: layer name
+# value: a Op, run Op will get output
 def net_preloaded(weights, input_image, pooling):
     net = {}
+    # 不断更新current层，从而形成串联网络
     current = input_image
     for i, name in enumerate(VGG19_LAYERS):
         kind = name[:4]
         if kind == 'conv':
+            # shape = (2,)
             kernels, bias = weights[i][0][0][0][0]
             # matconvnet: weights are [width, height, in_channels, out_channels]
             # tensorflow: weights are [height, width, in_channels, out_channels]
+            # 维度交换一下
             kernels = np.transpose(kernels, (1, 0, 2, 3))
+            # 展开成一维
             bias = bias.reshape(-1)
             current = _conv_layer(current, kernels, bias)
         elif kind == 'relu':

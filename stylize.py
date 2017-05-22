@@ -33,10 +33,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     :rtype: iterator[tuple[int|None,image]]
     """
 
-    # 这里应该是预留下来用于batch训练的
-    # 对于这个应用，只会使用到一幅图片
-    # 但是在基于model的应用里面可以用到 mini-batches，这里写了一个通用的方法
-    # shape = (None) + content.shape 定义最前面维度长度不定
+    # 参考conv2d的说明可知输入考虑了batch，必须是四维
     shape = (1,) + content.shape
     style_shapes = [(1,) + style.shape for style in styles]
     content_features = {}
@@ -44,7 +41,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
     # 抽取出来的还不可以直接使用
     # weights 根据下标来获取对应层的参数
-    # mean_pixel = array([ 123.68 ,  116.779,  103.939]) 用于 TODO
+    # mean_pixel = array([ 123.68 ,  116.779,  103.939]) 用于对图片做类似于batch normalization的工作
     vgg_weights, vgg_mean_pixel = vgg.load_net(network)
 
     # 默认参数倍数是指数级别向下的
@@ -70,6 +67,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         # 注意因为activation的表述，图片输入CNN只能以float的形式，尽管只是对图片空间做了一次缩放，并不影响训练和展示
         image = tf.placeholder('float', shape=shape)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
+        # 变为四维
         content_pre = np.array([vgg.preprocess(content, vgg_mean_pixel)])
         for layer in CONTENT_LAYERS:
             content_features[layer] = net[layer].eval(feed_dict={image: content_pre})
@@ -84,7 +82,10 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             style_pre = np.array([vgg.preprocess(styles[i], vgg_mean_pixel)])
             for layer in STYLE_LAYERS:
                 features = net[layer].eval(feed_dict={image: style_pre})
+                # 原文没有提如果是多通道如何
+                # 这里的处理就是按照输出图进行切分
                 features = np.reshape(features, (-1, features.shape[3]))
+                # 这里除是把文章里的系数一起算进去了
                 gram = np.matmul(features.T, features) / features.size
                 style_features[i][layer] = gram
 
@@ -96,8 +97,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
             initial = tf.random_normal(shape) * 0.256
         else:
-            initial = np.array([vgg.preprocess(initial, vgg_mean_pixel)])
-            initial = initial.astype('float32')
+            initial = np.array([vgg.preprocess(initial, vgg_mean_pixel)]).astype('float32')
             noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
             initial = (initial) * initial_content_noise_coeff + (tf.random_normal(shape) * 0.256) * (1.0 - initial_content_noise_coeff)
         image = tf.Variable(initial)
