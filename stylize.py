@@ -12,7 +12,7 @@ from PIL import Image
 # 串联后面的部分可以抽取内容信息
 # 可是为什么不从4-4/5-4获取呢?
 # 经过实验验证
-CONTENT_LAYERS = ('relu4_2', 'relu5_2')
+CONTENT_LAYERS = ('relu5_4', 'relu5_3')
 # 串联前面的部分可以抽取特征信息
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 
@@ -105,8 +105,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
         # content loss
         content_layers_weights = {}
-        content_layers_weights['relu4_2'] = content_weight_blend
-        content_layers_weights['relu5_2'] = 1.0 - content_weight_blend
+        content_layers_weights[CONTENT_LAYERS[0]] = content_weight_blend
+        content_layers_weights[CONTENT_LAYERS[1]] = 1.0 - content_weight_blend
 
         content_loss = 0
         content_losses = []
@@ -117,7 +117,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         content_loss += reduce(tf.add, content_losses)
 
         # style loss
-        # 对于多个style的loss直接叠加是什么意思? 这个子功能还没有看懂，就先不用吧。
+        # 对于多个style的loss直接叠加是什么意思？
+        # 我猜大概是要多个风格暴力融合?
         style_loss = 0
         for i in range(len(styles)):
             style_losses = []
@@ -150,6 +151,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             stderr.write('    style loss: %g\n' % style_loss.eval())
             stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
+            stderr.write('=========================================\n')
 
         # optimization
         best_loss = float('inf')
@@ -160,11 +162,12 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             if (print_iterations and print_iterations != 0):
                 print_progress()
             for i in range(iterations):
-                stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
+
                 train_step.run()
 
                 last_step = (i == iterations - 1)
                 if last_step or (print_iterations and i % print_iterations == 0):
+                    stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
                     print_progress()
 
                 if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:

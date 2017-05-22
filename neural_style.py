@@ -75,9 +75,14 @@ def build_parser():
     parser.add_argument('--network',
             dest='network', help='path to network parameters (default %(default)s)',
             metavar='VGG_PATH', default=VGG_PATH)
+
+    # 定义不同的content layer占比, 因为原文指定了两层
+    # 一个用 blend 一个用 1 - blend
     parser.add_argument('--content-weight-blend', type=float,
             dest='content_weight_blend', help='content weight blend, conv4_2 * blend + conv5_2 * (1-blend) (default %(default)s)',
             metavar='CONTENT_WEIGHT_BLEND', default=CONTENT_WEIGHT_BLEND)
+
+    # 定义与style的权重
     parser.add_argument('--content-weight', type=float,
             dest='content_weight', help='content weight (default %(default)s)',
             metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
@@ -118,8 +123,7 @@ def build_parser():
             dest='initial', help='initial image',
             metavar='INITIAL')
 
-    # 这里定义了混合率，而不是单纯的使用空白图或者content图，根据paper写的结论，随机图适合训练得到好的效果，content图可以更快收敛.
-    # 所以这里应该在训练和使用的时候使用不同value，但这里是一次性的，所以...也没啥好说的哦.
+    # 这里定义了混合率，而不是单纯的使用空白图或者content图，实验结果上来看，相差不大
     parser.add_argument('--initial-noiseblend', type=float,
             dest='initial_noiseblend', help='ratio of blending initial image with normalized noise (if no initial image specified, content image is used) (default %(default)s)',
             metavar='INITIAL_NOISEBLEND')
